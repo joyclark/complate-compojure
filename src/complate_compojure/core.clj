@@ -13,13 +13,14 @@
 (defrecord ComplateRenderer [file-name fn-name args]
   Renderer
   (render [this stream]
-    (.invoke engine file-name fn-name stream (into-array stream))))
+    (.invoke engine file-name fn-name stream (into-array args))))
 
 (defn response [file-name fn-name args]
   (->ComplateRenderer file-name fn-name args))
 
 (extend-type ring.core.protocols.StreamableResponseBody
   Renderer
+  ;; TODO Implement
   (write-body-to-stream [renderer response output-stream]))
 
 (defn -main []
