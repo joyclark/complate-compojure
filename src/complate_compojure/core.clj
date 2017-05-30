@@ -1,27 +1,23 @@
 (ns complate-compojure.core
-  (:import [complate ScriptingBridge]
-           [java.io OutputStream])
-  (:require [ring.core.protocols :refer [StreamableResponseBody]]
-            [ring.adapter.jetty :as jetty]
-            [complate-compojure.handler :refer [app]]))
+  (:import [complate.experiment Renderer]
+           [complate.experiment Stream]
+           [java.io OutputStream]
+           [java.io OutputStreamWriter])
+  (:require [ring.core.protocols :refer [StreamableResponseBody]]))
 
-(def engine (new ScriptingBridge))
+(def renderer (new Renderer))
 
-(defprotocol Renderer 
-  (render [this stream]))
+(deftype ComplateStream [stream]
+  Stream
+  (write [this msg] (.write stream msg))
+  (writeln [this msg] (.write stream (str msg "\n")))
+  (flush [this] (.flush stream)))
 
-(defrecord ComplateRenderer [file-name fn-name args]
-  Renderer
-  (render [this stream]
-    (.invoke engine file-name fn-name stream (into-array args))))
+(deftype ComplateRingRenderer [view-name model]
+  StreamableResponseBody
+  (write-body-to-stream [this response output-stream]
+    (.render renderer view-name (->ComplateStream (new OutputStreamWriter output-stream)) model)))
 
-(defn response [file-name fn-name args]
-  (->ComplateRenderer file-name fn-name args))
+(defn response [view-name & model]
+  (->ComplateRingRenderer view-name (into-array Object model)))
 
-(extend-type ring.core.protocols.StreamableResponseBody
-  Renderer
-  ;; TODO Implement
-  (write-body-to-stream [renderer response output-stream]))
-
-(defn -main []
-  (jetty/run-jetty app {:port 3030}))
